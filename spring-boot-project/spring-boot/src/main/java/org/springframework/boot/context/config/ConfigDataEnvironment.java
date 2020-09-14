@@ -35,6 +35,7 @@ import org.springframework.boot.context.properties.source.ConfigurationPropertyS
 import org.springframework.boot.env.BootstrapRegistry;
 import org.springframework.boot.env.DefaultPropertiesPropertySource;
 import org.springframework.boot.logging.DeferredLogFactory;
+import org.springframework.boot.util.Instantiator;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
@@ -108,6 +109,7 @@ class ConfigDataEnvironment {
 	private final ConfigDataLoaders loaders;
 
 	private final ConfigDataEnvironmentContributors contributors;
+	private final Set<Class<?>> bootstrapSources;
 
 	/**
 	 * Create a new {@link ConfigDataEnvironment} instance.
@@ -119,6 +121,20 @@ class ConfigDataEnvironment {
 	 */
 	ConfigDataEnvironment(DeferredLogFactory logFactory, BootstrapRegistry bootstrapRegistry,
 			ConfigurableEnvironment environment, ResourceLoader resourceLoader, Collection<String> additionalProfiles) {
+		this(logFactory, bootstrapRegistry, environment, resourceLoader, additionalProfiles, Collections.emptySet());
+	}
+
+	/**
+	 * Create a new {@link ConfigDataEnvironment} instance.
+	 * @param logFactory the deferred log factory
+	 * @param bootstrapRegistry the bootstrap registry
+	 * @param environment the Spring {@link Environment}.
+	 * @param resourceLoader {@link ResourceLoader} to load resource locations
+	 * @param additionalProfiles any additional profiles to activate
+	 * @param bootstrapSources
+	 */
+	ConfigDataEnvironment(DeferredLogFactory logFactory, BootstrapRegistry bootstrapRegistry,
+			ConfigurableEnvironment environment, ResourceLoader resourceLoader, Collection<String> additionalProfiles, Set<Class<?>> bootstrapSources) {
 		Binder binder = Binder.get(environment);
 		UseLegacyConfigProcessingException.throwIfRequested(binder);
 		ConfigDataLocationNotFoundAction locationNotFoundAction = binder
@@ -132,6 +148,7 @@ class ConfigDataEnvironment {
 		this.additionalProfiles = additionalProfiles;
 		this.loaders = new ConfigDataLoaders(logFactory, locationNotFoundAction);
 		this.contributors = createContributors(binder);
+		this.bootstrapSources = bootstrapSources;
 	}
 
 	protected ConfigDataLocationResolvers createConfigDataLocationResolvers(DeferredLogFactory logFactory,
@@ -195,12 +212,29 @@ class ConfigDataEnvironment {
 	 */
 	void processAndApply() {
 		ConfigDataImporter importer = new ConfigDataImporter(this.resolvers, this.loaders);
+		instantiateBootstrapClasses();
 		ConfigDataEnvironmentContributors contributors = processInitial(this.contributors, importer);
 		ConfigDataActivationContext activationContext = createActivationContext(contributors);
 		contributors = processWithoutProfiles(contributors, importer, activationContext);
 		activationContext = withProfiles(contributors, activationContext);
 		contributors = processWithProfiles(contributors, importer, activationContext);
 		applyToEnvironment(contributors, activationContext);
+	}
+
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	private void instantiateBootstrapClasses() {
+		this.logger.trace("Instantiating bootstrap sources");
+		Binder binder = contributors.getBinder(null, BinderOption.FAIL_ON_BIND_TO_INACTIVE_SOURCE);
+		List<Object> instances = new Instantiator<>(Object.class, params -> {
+			params.add(Binder.class, binder);
+			params.add(BootstrapRegistry.class, bootstrapRegistry);
+			//params.add(Profiles.class, context.getProfiles());
+			params.add(Log.class, logFactory::getLog);
+		}).instantiateClasses(bootstrapSources);
+		instances.forEach(instance -> {
+			Class type = instance.getClass();
+			bootstrapRegistry.register(type, () -> instance);
+		});
 	}
 
 	private ConfigDataEnvironmentContributors processInitial(ConfigDataEnvironmentContributors contributors,

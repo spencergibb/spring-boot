@@ -205,6 +205,8 @@ public class SpringApplication {
 
 	private Set<Class<?>> primarySources;
 
+	private Set<Class<?>> bootstrapSources;
+
 	private Set<String> sources = new LinkedHashSet<>();
 
 	private Class<?> mainApplicationClass;
@@ -1146,6 +1148,14 @@ public class SpringApplication {
 			allSources.addAll(this.sources);
 		}
 		return Collections.unmodifiableSet(allSources);
+	}
+
+	public Set<Class<?>> getBootstrapSources() {
+		return this.bootstrapSources;
+	}
+
+	public void setBootstrapSources(Set<Class<?>> bootstrapSources) {
+		this.bootstrapSources = bootstrapSources;
 	}
 
 	/**

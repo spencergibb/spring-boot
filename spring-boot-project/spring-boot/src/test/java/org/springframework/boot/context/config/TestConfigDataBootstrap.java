@@ -20,6 +20,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.env.BootstrapRegistry;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.MapPropertySource;
 
@@ -44,6 +48,12 @@ class TestConfigDataBootstrap {
 		public List<Location> resolve(ConfigDataLocationResolverContext context, String location, boolean optional) {
 			ResolverHelper helper = context.getBootstrapRegistry().get(ResolverHelper.class,
 					() -> new ResolverHelper(location));
+			context.getBootstrapRegistry().getRegistration(TestBootstrapSource.class)
+					.onApplicationContextPrepared((ctxt, src) -> {
+						if (!ctxt.getBeanFactory().containsBean("testbootstrapsource")) {
+							ctxt.getBeanFactory().registerSingleton("testbootstrapsource", src);
+						}
+					});
 			return Collections.singletonList(new Location(helper));
 		}
 
@@ -108,6 +118,16 @@ class TestConfigDataBootstrap {
 
 		static void addToContext(ConfigurableApplicationContext context, LoaderHelper loaderHelper) {
 			context.getBeanFactory().registerSingleton("loaderHelper", loaderHelper);
+		}
+
+	}
+
+	static class TestBootstrapSource {
+
+		boolean dependenciesInjected;
+
+		public TestBootstrapSource(BootstrapRegistry registry, Log log, Binder binder) {
+			dependenciesInjected = registry != null && log != null && binder != null;
 		}
 
 	}

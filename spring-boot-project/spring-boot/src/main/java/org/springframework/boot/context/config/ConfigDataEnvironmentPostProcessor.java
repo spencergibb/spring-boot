@@ -19,6 +19,7 @@ package org.springframework.boot.context.config;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
@@ -76,15 +77,15 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-		postProcessEnvironment(environment, application.getResourceLoader(), application.getAdditionalProfiles());
+		postProcessEnvironment(environment, application.getResourceLoader(), application.getAdditionalProfiles(), application.getBootstrapSources());
 	}
 
 	void postProcessEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			Collection<String> additionalProfiles) {
+			Collection<String> additionalProfiles, Set<Class<?>> bootstrapSources) {
 		try {
 			this.logger.trace("Post-processing environment to add config data");
 			resourceLoader = (resourceLoader != null) ? resourceLoader : new DefaultResourceLoader();
-			getConfigDataEnvironment(environment, resourceLoader, additionalProfiles).processAndApply();
+			getConfigDataEnvironment(environment, resourceLoader, additionalProfiles, bootstrapSources).processAndApply();
 		}
 		catch (UseLegacyConfigProcessingException ex) {
 			this.logger.debug(LogMessage.format("Switching to legacy config file processing [%s]",
@@ -95,8 +96,13 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 
 	ConfigDataEnvironment getConfigDataEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
 			Collection<String> additionalProfiles) {
+		return getConfigDataEnvironment(environment, resourceLoader, additionalProfiles, Collections.emptySet());
+	}
+
+	ConfigDataEnvironment getConfigDataEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
+			Collection<String> additionalProfiles, Set<Class<?>> bootstrapSources) {
 		return new ConfigDataEnvironment(this.logFactory, this.bootstrapRegistry, environment, resourceLoader,
-				additionalProfiles);
+				additionalProfiles, bootstrapSources);
 	}
 
 	private void postProcessUsingLegacyApplicationListener(ConfigurableEnvironment environment,
@@ -150,7 +156,7 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 		bootstrapRegistry = (bootstrapRegistry != null) ? bootstrapRegistry : new DefaultBootstrapRegisty();
 		ConfigDataEnvironmentPostProcessor postProcessor = new ConfigDataEnvironmentPostProcessor(logFactory,
 				bootstrapRegistry);
-		postProcessor.postProcessEnvironment(environment, resourceLoader, additionalProfiles);
+		postProcessor.postProcessEnvironment(environment, resourceLoader, additionalProfiles, Collections.emptySet());
 	}
 
 	@SuppressWarnings("deprecation")

@@ -16,6 +16,8 @@
 
 package org.springframework.boot.context.config;
 
+import java.util.Collections;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +44,7 @@ class ConfigDataEnvironmentPostProcessorBootstrapRegistryIntegrationTests {
 	void setup() {
 		this.application = new SpringApplication(Config.class);
 		this.application.setWebApplicationType(WebApplicationType.NONE);
+		this.application.setBootstrapSources(Collections.singleton(TestConfigDataBootstrap.TestBootstrapSource.class));
 	}
 
 	@Test
@@ -51,6 +54,9 @@ class ConfigDataEnvironmentPostProcessorBootstrapRegistryIntegrationTests {
 			LoaderHelper bean = context.getBean(TestConfigDataBootstrap.LoaderHelper.class);
 			assertThat(bean).isNotNull();
 			assertThat(bean.getLocation().getResolverHelper().getLocation()).isEqualTo("testbootstrap:test");
+			TestConfigDataBootstrap.TestBootstrapSource bootstrapSource = context.getBean(TestConfigDataBootstrap.TestBootstrapSource.class);
+			assertThat(bootstrapSource).isNotNull();
+			assertThat(bootstrapSource.dependenciesInjected).isTrue();
 		}
 	}
 

@@ -305,6 +305,16 @@ public class SpringApplicationBuilder {
 	}
 
 	/**
+	 * Add bootstrapSources (configuration classes and components) to this application.
+	 * @param bootstrapSources the bootstrapSources to add
+	 * @return the current builder
+	 */
+	public SpringApplicationBuilder bootstrapSources(Class<?>... bootstrapSources) {
+		this.application.setBootstrapSources(new LinkedHashSet<>(Arrays.asList(bootstrapSources)));
+		return this;
+	}
+
+	/**
 	 * Flag to explicitly request a specific type of web application. Auto-detected based
 	 * on the classpath if not set.
 	 * @param webApplicationType the type of web application

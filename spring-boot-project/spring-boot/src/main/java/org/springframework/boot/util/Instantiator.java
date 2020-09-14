@@ -93,6 +93,26 @@ public class Instantiator<T> {
 		return Collections.unmodifiableList(instances);
 	}
 
+	/**
+	 * Instantiate the given set of class name, injecting constructor arguments as
+	 * necessary.
+	 * @param types the classes to instantiate
+	 * @return a list of instantiated instances
+	 */
+	public List<T> instantiateClasses(Collection<Class<?>> types) {
+		List<T> instances = new ArrayList<>(types.size());
+		for (Class<?> type : types) {
+			try {
+				instances.add(instantiate(type));
+			}
+			catch (Exception ex) {
+				throw new IllegalArgumentException("Unable to instantiate " + this.type.getName() + " [" + type + "]", ex);
+			}
+		}
+		AnnotationAwareOrderComparator.sort(instances);
+		return Collections.unmodifiableList(instances);
+	}
+
 	private T instantiate(String name) {
 		try {
 			Class<?> type = ClassUtils.forName(name, null);
